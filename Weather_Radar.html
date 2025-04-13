@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Australian Weather Radar Animation</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            color: white;
+        }
+
+        #container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #4CAF50;
+            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        #map-container {
+            position: relative;
+            width: 100%;
+            height: 90vh;
+            border: 2px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            background: radial-gradient(ellipse at center, #111122 0%, #000000 100%);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 0 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(20, 20, 40, 0.8);
+            font-size: 12px;
+            border: 1px solid #4a4a8a;
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+        }
+
+        #date-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(20, 20, 40, 0.8);
+            border: 1px solid #4a4a8a;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            color: rgb(104, 201, 250);
+            z-index: 10;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .state {
+            fill: #1a1a2e;
+            stroke: #4a4a8a;
+            stroke-width: 0.5;
+            transition: fill 0.3s ease;
+        }
+
+        .state:hover {
+            fill-opacity: 0.7;
+            stroke-width: 1.5;
+        }
+
+        .weatherPoint {
+            filter: drop-shadow(0 0 2px rgba(0, 255, 255, 0.7));
+            transition: r 0.2s ease, opacity 0.2s ease;
+        }
+
+        .weatherPoint:hover {
+            filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.9));
+            opacity: 1 !important;
+            r: 8px !important;
+        }
+
+        .control-group {
+            margin: 10px 0;
+            padding: 15px;
+            background-color: rgba(20, 20, 40, 0.8);
+            border-radius: 5px;
+            display: inline-block;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-label {
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+
+        #sweep-color {
+            vertical-align: middle;
+            width: 50px;
+            height: 25px;
+            border: 1px solid #444;
+            border-radius: 3px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        #tooltip {
+            position: absolute;
+            padding: 10px;
+            background: rgba(20, 20, 40, 0.9);
+            border: 1px solid #4a4a8a;
+            border-radius: 5px;
+            pointer-events: none;
+            font-size: 14px;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #tooltip h3 {
+            margin: 0 0 5px 0;
+            color: #4CAF50;
+        }
+
+        #tooltip p {
+            margin: 5px 0;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .zoom-btn {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            border-radius: 50%;
+        }
+
+        #time-slider {
+            width: 300px;
+            margin: 0 10px;
+            vertical-align: middle;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+        }
+
+        .slider-value {
+            min-width: 50px;
+            text-align: center;
+            margin-left: 10px;
+        }
+
+        .pulse-circle {
+            fill: none;
+            stroke-width: 2;
+            stroke-opacity: 0.7;
+            stroke-dasharray: 5, 5;
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                stroke-width: 2;
+                stroke-opacity: 0.7;
+                r: 10;
+            }
+            100% {
+                stroke-width: 0;
+                stroke-opacity: 0;
+                r: 100;
+            }
+        }
+
+        .radar-circle {
+            fill: none;
+            stroke-width: 0.5;
+            stroke-opacity: 0.3;
+            stroke-dasharray: 5, 5;
+        }
+
+        .radar-sweep {
+            stroke-linecap: round;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <h1>Australian Weather Radar Animation</h1>
+        <div id="map-container">
+            <div id="date-display"></div>
+            <div id="legend">
+                <h3>Rainfall Intensity</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #0097e6;"></div>
+                    <span>Light Rain (0-10mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #00f;"></div>
+                    <span>Moderate Rain (10-30mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #0f0;"></div>
+                    <span>Heavy Rain (30-50mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ff0;"></div>
+                    <span>Very Heavy Rain (50-100mm)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #f00;"></div>
+                    <span>Extreme Rain (>100mm)</span>
+                </div>
+            </div>
+            <div class="zoom-controls">
+                <button class="zoom-btn" id="zoom-in">+</button>
+                <button class="zoom-btn" id="zoom-out">-</button>
+                <button class="zoom-btn" id="zoom-reset">↻</button>
+            </div>
+            <div id="tooltip"></div>
+            <svg id="map"></svg>
+        </div>
+        <div id="controls">
+            <div class="control-group">
+                <button id="prev-btn">Previous</button>
+                <button id="play-btn">Play</button>
+                <button id="pause-btn">Pause</button>
+                <button id="next-btn">Next</button>
+                <button id="reset-btn">Reset</button>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Speed:</span>
+                <input type="range" id="speed-slider" min="100" max="1000" value="500">
+                <span id="speed-value">500ms</span>
+            </div>
+            <div class="control-group slider-container">
+                <span class="control-label">Time:</span>
+                <input type="range" id="time-slider" min="0" max="100" value="0">
+                <span class="slider-value" id="time-value">1/100</span>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Radar Color:</span>
+                <input type="color" id="sweep-color" value="#00ffff">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set up the SVG container
+        const width = document.getElementById('map-container').clientWidth;
+        const height = document.getElementById('map-container').clientHeight;
+        const svg = d3.select("#map")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create a group for all map elements that will transform with zoom
+        const mapGroup = svg.append("g");
+
+        // Define the map projection for Australia
+        const projection = d3.geoMercator()
+            .scale(1000)
+            .center([133, -25])  // Center of Australia
+            .translate([width / 2, height / 2]);
+
+        const path = d3.geoPath().projection(projection);
+
+        // Set up zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.5, 8])
+            .on('zoom', (event) => {
+                mapGroup.attr('transform', event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Zoom controls
+        document.getElementById('zoom-in').addEventListener('click', () => {
+            svg.transition().call(zoom.scaleBy, 1.5);
+        });
+
+        document.getElementById('zoom-out').addEventListener('click', () => {
+            svg.transition().call(zoom.scaleBy, 0.75);
+        });
+
+        document.getElementById('zoom-reset').addEventListener('click', () => {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity,
+                d3.zoomTransform(svg.node()).invert([width / 2, height / 2])
+            );
+        });
+
+        // Color scale for rainfall intensity (updated colors)
+        const colorScale = d3.scaleThreshold()
+            .domain([0, 10, 30, 50, 100])
+            .range(["#0af", "#00f", "#0f0", "#ff0", "#f00", "#800080"]);
+
+        // Color scale for states (pastel colors)
+        const stateColorScale = d3.scaleOrdinal()
+            .domain(["New South Wales", "Victoria", "Queensland", "South Australia", 
+                    "Western Australia", "Tasmania", "Northern Territory", 
+                    "Australian Capital Territory"])
+            .range(["#ffb8b8", "#b8ffb8", "#b8b8ff", "#ffffb8", "#ffb8ff", "#b8ffff", "#ffd8b8", "#d8b8ff"]);
+
+        // Variables for animation control
+        let currentDateIndex = 0;
+        let animationInterval;
+        let animationSpeed = 500;
+        let weatherData = [];
+        let uniqueDates = [];
+        let currentSweepColor = "#00ffff";
+        let radarAnimationInterval;
+        let radarAngle = 0;
+        let radarElements = {};
+
+        // Tooltip setup
+        const tooltip = d3.select("#tooltip");
+
+        // Load GeoJSON data for Australian States
+        d3.json("australian-states.json").then(function (geoData) {
+            // Draw the state boundaries with colors
+            mapGroup.selectAll(".state")
+                .data(geoData.features)
+                .enter().append("path")
+                .attr("class", "state")
+                .attr("d", path)
+                .style("fill", function (d) {
+                    return stateColorScale(d.properties.STATE_NAME);
+                })
+                .style("stroke", "#555")
+                .style("stroke-width", 1)
+                .on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", 0.9);
+                    tooltip.html(`<h3>${d.properties.STATE_NAME}</h3>`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            // Load weather data
+            d3.csv("Australia_weather.csv").then(function (data) {
+                weatherData = data;
+
+                // Extract unique dates and sort them
+                uniqueDates = [...new Set(data.map(d => d.Date))].sort();
+
+                // Initialize time slider
+                const timeSlider = document.getElementById('time-slider');
+                timeSlider.max = uniqueDates.length - 1;
+                document.getElementById('time-value').textContent = `1/${uniqueDates.length}`;
+
+                // Initialize the display
+                updateWeatherDisplay(0);
+                initRadarAnimation(); // Initialize continuous radar animation
+
+                // Set up controls
+                document.getElementById('play-btn').addEventListener('click', startAnimation);
+                document.getElementById('pause-btn').addEventListener('click', pauseAnimation);
+                document.getElementById('reset-btn').addEventListener('click', resetAnimation);
+                document.getElementById('prev-btn').addEventListener('click', prevFrame);
+                document.getElementById('next-btn').addEventListener('click', nextFrame);
+                
+                document.getElementById('speed-slider').addEventListener('input', function () {
+                    animationSpeed = 1100 - this.value; // Invert so higher slider = faster
+                    document.getElementById('speed-value').textContent = `${animationSpeed}ms`;
+                    if (animationInterval) {
+                        pauseAnimation();
+                        startAnimation();
+                    }
+                });
+                
+                // Time slider event
+                timeSlider.addEventListener('input', function() {
+                    currentDateIndex = parseInt(this.value);
+                    updateWeatherDisplay(currentDateIndex);
+                    updateTimeSliderValue();
+                });
+                
+                // Radar color picker
+                document.getElementById('sweep-color').addEventListener('input', function() {
+                    currentSweepColor = this.value;
+                    updateRadarColor(); // Update radar elements with new color
+                });
+            });
+        }).catch(function (error) {
+            console.error("Error loading GeoJSON data:", error);
+        });
+
+        function initRadarAnimation() {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.max(width, height) * 0.7;
+
+            // Create radar background circles
+            const circleCount = 8;
+            for (let i = 1; i <= circleCount; i++) {
+                radarElements[`circle${i}`] = mapGroup.append("circle")
+                    .attr("class", "radar-circle")
+                    .attr("cx", centerX)
+                    .attr("cy", centerY)
+                    .attr("r", maxRadius * (i / circleCount))
+                    .style("stroke", currentSweepColor);
+            }
+
+            // Create a gradient for the sweep
+            const gradient = mapGroup.append("defs")
+                .append("linearGradient")
+                .attr("id", "sweepGradient")
+                .attr("x1", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "100%")
+                .attr("y2", "0%");
+
+            gradient.append("stop")
+                .attr("offset", "0%")
+                .style("stop-color", currentSweepColor)
+                .style("stop-opacity", 0.8);
+
+            gradient.append("stop")
+                .attr("offset", "100%")
+                .style("stop-color", currentSweepColor)
+                .style("stop-opacity", 0.1);
+
+            // Create the main sweep
+            radarElements.sweep = mapGroup.append("path")
+                .attr("class", "radar-sweep")
+                .attr("d", createSweepPath(0))
+                .style("fill", "none")
+                .style("stroke", "url(#sweepGradient)")
+                .style("stroke-width", 3)
+                .style("filter", "url(#glow)");
+
+            // Create a wider, more transparent sweep behind it
+            radarElements.backSweep = mapGroup.append("path")
+                .attr("class", "radar-sweep")
+                .attr("d", createSweepPath(0))
+                .style("fill", "none")
+                .style("stroke", currentSweepColor)
+                .style("stroke-width", 15)
+                .style("opacity", 0.2);
+
+            // Add glow filter
+            const defs = mapGroup.append("defs");
+            const glowFilter = defs.append("filter")
+                .attr("id", "glow")
+                .attr("height", "130%")
+                .attr("width", "130%");
+
+            glowFilter.append("feGaussianBlur")
+                .attr("stdDeviation", "3.5")
+                .attr("result", "blur");
+
+            glowFilter.append("feComposite")
+                .attr("in", "SourceGraphic")
+                .attr("in2", "blur")
+                .attr("operator", "over");
+
+            // Start continuous radar animation
+            animateRadar();
+        }
+
+        function animateRadar() {
+            if (radarAnimationInterval) clearInterval(radarAnimationInterval);
+            
+            radarAnimationInterval = setInterval(() => {
+                radarAngle = (radarAngle + 2) % 360; // Slower, smoother rotation
+                const sweepPath = createSweepPath(radarAngle);
+                
+                if (radarElements.sweep) {
+                    radarElements.sweep.attr("d", sweepPath);
+                }
+                
+                if (radarElements.backSweep) {
+                    radarElements.backSweep.attr("d", sweepPath);
+                    
+                    // Add pulse effect to the back sweep
+                    const pulseWidth = 15 + 5 * Math.sin(Date.now() / 200);
+                    radarElements.backSweep.style("stroke-width", pulseWidth);
+                }
+            }, 30); // Smooth animation with 30ms interval
+        }
+
+        function updateRadarColor() {
+            // Update all radar elements with new color
+            Object.values(radarElements).forEach(el => {
+                if (el.attr('class') === 'radar-circle') {
+                    el.style("stroke", currentSweepColor);
+                }
+            });
+            
+            if (radarElements.backSweep) {
+                radarElements.backSweep.style("stroke", currentSweepColor);
+            }
+            
+            // Update gradient
+            d3.select("#sweepGradient stop:nth-child(1)")
+                .style("stop-color", currentSweepColor);
+            d3.select("#sweepGradient stop:nth-child(2)")
+                .style("stop-color", currentSweepColor);
+        }
+
+        function updateWeatherDisplay(dateIndex) {
+            const currentDate = uniqueDates[dateIndex];
+            document.getElementById('date-display').textContent = currentDate;
+
+            // Update time slider
+            document.getElementById('time-slider').value = dateIndex;
+            updateTimeSliderValue();
+
+            // Filter data for this date
+            const dailyData = weatherData.filter(d => d.Date === currentDate);
+
+            // Remove previous weather points
+            mapGroup.selectAll(".weatherPoint").remove();
+
+            // Add new weather points
+            const weatherPoints = mapGroup.selectAll(".weatherPoint")
+                .data(dailyData)
+                .enter().append("circle")
+                .attr("class", "weatherPoint")
+                .attr("cx", function (d) {
+                    return projection([parseFloat(d.Longitude), parseFloat(d.Latitude)])[0];
+                })
+                .attr("cy", function (d) {
+                    return projection([parseFloat(d.Longitude), parseFloat(d.Latitude)])[1];
+                })
+                .attr("r", function (d) {
+                    // Scale radius based on rainfall (with minimum size)
+                    const rainfall = parseFloat(d.Rainfall) || 0;
+                    return Math.max(3, Math.min(15, rainfall / 5));
+                })
+                .style("fill", function (d) {
+                    const rainfall = parseFloat(d.Rainfall) || 0;
+                    return colorScale(rainfall);
+                })
+                .style("opacity", 0.9)
+                .style("stroke", "white")
+                .style("stroke-width", 0.5);
+
+            // Add tooltip to weather points
+            weatherPoints.on("mouseover", function(event, d) {
+                    const rainfall = parseFloat(d.Rainfall) || 0;
+                    const intensity = getRainfallIntensity(rainfall);
+                    
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", 0.9);
+                    tooltip.html(`<h3>${d.Location}</h3>
+                                <p><strong>Date:</strong> ${d.Date}</p>
+                                <p><strong>Rainfall:</strong> ${rainfall.toFixed(1)}mm</p>
+                                <p><strong>Intensity:</strong> ${intensity}</p>
+                                <p><strong>Lat/Long:</strong> ${d.Latitude}, ${d.Longitude}</p>`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px");
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+        }
+
+        function getRainfallIntensity(rainfall) {
+            if (rainfall <= 10) return "Light Rain";
+            if (rainfall <= 30) return "Moderate Rain";
+            if (rainfall <= 50) return "Heavy Rain";
+            if (rainfall <= 100) return "Very Heavy Rain";
+            return "Extreme Rain";
+        }
+
+        function createSweepPath(angle) {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.max(width, height) * 0.7;
+
+            // Convert angle to radians
+            const radians = angle * Math.PI / 180;
+
+            // Calculate end point
+            const endX = centerX + radius * Math.cos(radians);
+            const endY = centerY + radius * Math.sin(radians);
+
+            // Create arc path with a slight curve for more dynamic look
+            const controlX = centerX + radius * 0.5 * Math.cos(radians);
+            const controlY = centerY + radius * 0.5 * Math.sin(radians);
+
+            return `M${centerX},${centerY} Q${controlX},${controlY} ${endX},${endY}`;
+        }
+
+        function startAnimation() {
+            if (animationInterval) clearInterval(animationInterval);
+
+            animationInterval = setInterval(() => {
+                currentDateIndex = (currentDateIndex + 1) % uniqueDates.length;
+                updateWeatherDisplay(currentDateIndex);
+
+                // If we've reached the end, pause
+                if (currentDateIndex === uniqueDates.length - 1) {
+                    pauseAnimation();
+                }
+            }, animationSpeed);
+        }
+
+        function pauseAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+        }
+
+        function resetAnimation() {
+            pauseAnimation();
+            currentDateIndex = 0;
+            updateWeatherDisplay(currentDateIndex);
+        }
+        
+        function prevFrame() {
+            pauseAnimation();
+            currentDateIndex = Math.max(0, currentDateIndex - 1);
+            updateWeatherDisplay(currentDateIndex);
+        }
+        
+        function nextFrame() {
+            pauseAnimation();
+            currentDateIndex = Math.min(uniqueDates.length - 1, currentDateIndex + 1);
+            updateWeatherDisplay(currentDateIndex);
+        }
+        
+        function updateTimeSliderValue() {
+            document.getElementById('time-value').textContent = 
+                `${currentDateIndex + 1}/${uniqueDates.length}`;
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Australia Wind Patterns</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        #map-container {
+            width: 1000px;
+            height: 800px;
+            margin: 0 auto;
+            background: #e6f7ff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .state {
+            stroke: #fff;
+            stroke-width: 1px;
+            opacity: 0.8;
+        }
+        .wind-arrow {
+            stroke-width: 1px;
+        }
+        .wind-gust-arrow {
+            stroke-width: 1.5px;
+        }
+        .legend {
+            font-size: 12px;
+        }
+        #controls {
+            text-align: center;
+            margin: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        #date-display {
+            font-weight: bold;
+            margin: 10px;
+            font-size: 16px;
+            color: #333;
+        }
+        #title {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .location-label {
+            font-size: 10px;
+            fill: #333;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 0 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 14px;
+            min-width: 100px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #pause {
+            background: #f44336;
+        }
+        #pause:hover {
+            background: #d32f2f;
+        }
+        #prev, #next {
+            background: #2196F3;
+        }
+        #prev:hover, #next:hover {
+            background: #0b7dda;
+        }
+        .state-label {
+            font-size: 12px;
+            font-weight: bold;
+            fill: #333;
+            text-anchor: middle;
+            pointer-events: none;
+        }
+        .wind-speed-legend {
+            font-size: 12px;
+        }
+        .zoom-controls {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            z-index: 100;
+        }
+        .zoom-button {
+            display: block;
+            width: 30px;
+            height: 30px;
+            margin-bottom: 5px;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 20px;
+            line-height: 30px;
+            text-align: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        .zoom-button:hover {
+            background: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">
+        <h1>Australia Wind Patterns</h1>
+        <p>Visualization of wind direction and speed across locations</p>
+    </div>
+    <div id="controls">
+        <button id="play">Play</button>
+        <button id="pause">Pause</button>
+        <button id="prev">Previous</button>
+        <button id="next">Next</button>
+        <div id="date-display"></div>
+    </div>
+    <div id="map-container">
+        <div id="loading">Loading visualization...</div>
+        <div class="zoom-controls">
+            <div class="zoom-button" id="zoom-in">+</div>
+            <div class="zoom-button" id="zoom-out">-</div>
+            <div class="zoom-button" id="reset-zoom">R</div>
+        </div>
+    </div>
+
+    <script>
+        // Dimensions
+        const width = 1000;
+        const height = 800;
+        const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+
+        // Create SVG
+        const svg = d3.select("#map-container")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        // Create a group for all zoomable elements
+        const g = svg.append("g");
+
+        // Projection for Australia
+        const projection = d3.geoMercator()
+            .center([134, -25])
+            .scale(1000)
+            .translate([width / 2, height / 2]);
+
+        const path = d3.geoPath().projection(projection);
+
+        // Color scales
+        const colorScale = d3.scaleSequential(d3.interpolateReds)
+            .domain([0, 100]);
+
+        // State colors
+        const stateColors = {
+            "New South Wales": "#1f77b4",
+            "Victoria": "#ff7f0e",
+            "Queensland": "#2ca02c",
+            "South Australia": "#d62728",
+            "Western Australia": "#9467bd",
+            "Tasmania": "#8c564b",
+            "Northern Territory": "#e377c2",
+            "Australian Capital Territory": "#7f7f7f"
+        };
+
+        // Wind direction mapping
+        const windDirectionMap = {
+            'N': 0, 'NNE': 22.5, 'NE': 45, 'ENE': 67.5,
+            'E': 90, 'ESE': 112.5, 'SE': 135, 'SSE': 157.5,
+            'S': 180, 'SSW': 202.5, 'SW': 225, 'WSW': 247.5,
+            'W': 270, 'WNW': 292.5, 'NW': 315, 'NNW': 337.5
+        };
+
+        // Zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([1, 8])
+            .on('zoom', (event) => {
+                g.attr('transform', event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Zoom controls
+        d3.select('#zoom-in').on('click', () => {
+            svg.transition().call(zoom.scaleBy, 2);
+        });
+
+        d3.select('#zoom-out').on('click', () => {
+            svg.transition().call(zoom.scaleBy, 0.5);
+        });
+
+        d3.select('#reset-zoom').on('click', () => {
+            svg.transition().call(zoom.transform, d3.zoomIdentity);
+        });
+
+        // Load and process data
+        Promise.all([
+            d3.text("Australia_weather.csv"),
+            d3.json("australian-states.json")
+        ]).then(function([csvText, australia]) {
+            // Hide loading message
+            d3.select("#loading").remove();
+            
+            // Parse CSV and optimize data processing
+            const data = d3.csvParse(csvText);
+            
+            // Create location coordinates map
+            const locationCoordinates = {};
+            const locationStates = {};
+            
+            data.forEach(d => {
+                if (d.Latitude && d.Longitude) {
+                    const loc = d.Location;
+                    locationCoordinates[loc] = [
+                        parseFloat(d.Longitude),
+                        parseFloat(d.Latitude)
+                    ];
+                    locationStates[loc] = d.State;
+                }
+            });
+
+            // Group data by date - using the correct date column name
+            // Note: Adjust 'Date' if your CSV uses a different column name
+            const groupedByDate = d3.rollup(data, 
+                v => v, 
+                d => d.Date // Change this to match your date column name if different
+            );
+            
+            // Convert to array and sort by date
+            const windData = Array.from(groupedByDate, ([date, records]) => {
+                // Process only unique locations per date to reduce data volume
+                const locationMap = new Map();
+                
+                records.forEach(d => {
+                    const loc = d.Location;
+                    if (!locationMap.has(loc)) {
+                        locationMap.set(loc, {
+                            location: loc,
+                            state: locationStates[loc],
+                            date: date,
+                            direction: windDirectionMap[d.WindDir3pm || d.WindDir9am] || 0,
+                            speed: +(d.WindSpeed3pm || d.WindSpeed9am) || 0,
+                            gustSpeed: +d.WindGustSpeed || 0,
+                            directionText: d.WindDir3pm || d.WindDir9am,
+                            gustDirection: d.WindGustDir,
+                            gustDirectionDegrees: windDirectionMap[d.WindGustDir] || 0,
+                            coords: locationCoordinates[loc]
+                        });
+                    }
+                });
+                
+                return {
+                    date: date || "Unknown date", // Handle missing dates
+                    locations: Array.from(locationMap.values())
+                        .filter(d => d.coords) // Only locations with coordinates
+                };
+            }).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Draw states
+            g.selectAll(".state")
+                .data(australia.features)
+                .enter()
+                .append("path")
+                .attr("class", "state")
+                .attr("d", path)
+                .attr("fill", d => stateColors[d.properties.STATE_NAME] || "#f0f0f0")
+                .attr("opacity", 0.8);
+
+            // Add state labels
+            g.selectAll(".state-label")
+                .data(australia.features)
+                .enter()
+                .append("text")
+                .attr("class", "state-label")
+                .attr("transform", d => `translate(${path.centroid(d)})`)
+                .text(d => d.properties.STATE_NAME)
+                .attr("fill", d => {
+                    const c = stateColors[d.properties.STATE_NAME] || "#f0f0f0";
+                    const r = parseInt(c.substr(1,2), 16);
+                    const g = parseInt(c.substr(3,2), 16);
+                    const b = parseInt(c.substr(5,2), 16);
+                    return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? "#333" : "#fff";
+                });
+
+            // Animation controls
+            let currentDay = 0;
+            let animationInterval;
+            const animationSpeed = 1000; // ms between days
+            
+            // Initial draw
+            drawWindArrows(windData[currentDay]);
+            
+            // Control functions
+            document.getElementById("play").addEventListener("click", function() {
+                clearInterval(animationInterval);
+                animationInterval = setInterval(advanceDay, animationSpeed);
+            });
+            
+            document.getElementById("pause").addEventListener("click", function() {
+                clearInterval(animationInterval);
+            });
+            
+            document.getElementById("prev").addEventListener("click", function() {
+                currentDay = (currentDay - 1 + windData.length) % windData.length;
+                updateDisplay();
+            });
+            
+            document.getElementById("next").addEventListener("click", function() {
+                currentDay = (currentDay + 1) % windData.length;
+                updateDisplay();
+            });
+            
+            function advanceDay() {
+                currentDay = (currentDay + 1) % windData.length;
+                updateDisplay();
+            }
+            
+            function updateDisplay() {
+                const currentData = windData[currentDay];
+                document.getElementById("date-display").textContent = 
+                    `Date: ${currentData.date}`;
+                drawWindArrows(currentData);
+            }
+
+            // Optimized wind arrow drawing
+            function drawWindArrows(windDataForDay) {
+                // Clear previous arrows
+                g.selectAll(".wind-arrow, .wind-gust-arrow, .location-label").remove();
+                
+                // Process only a subset of locations if there are too many
+                const locationsToShow = windDataForDay.locations.length > 100 ? 
+                    windDataForDay.locations.filter((_, i) => i % 3 === 0) : // Show every 3rd location
+                    windDataForDay.locations;
+                
+                // Draw new arrows
+                locationsToShow.forEach(location => {
+                    const [x, y] = projection(location.coords);
+                    if (isNaN(x) || isNaN(y)) return;
+                    
+                    // Regular wind arrow
+                    g.append("path")
+                        .attr("class", "wind-arrow")
+                        .attr("d", d3.symbol().type(d3.symbolTriangle).size(80))
+                        .attr("transform", `translate(${x},${y}) rotate(${location.direction})`)
+                        .attr("fill", stateColors[location.state] || "#cccccc")
+                        .attr("stroke", "#333")
+                        .attr("stroke-width", 0.5)
+                        .append("title")
+                        .text(`${location.location}\nWind: ${location.directionText} @ ${location.speed} km/h`);
+                    
+                    // Wind gust arrow
+                    g.append("path")
+                        .attr("class", "wind-gust-arrow")
+                        .attr("d", d3.symbol().type(d3.symbolTriangle).size(120))
+                        .attr("transform", `translate(${x},${y}) rotate(${location.gustDirectionDegrees})`)
+                        .attr("fill", colorScale(location.gustSpeed))
+                        .attr("stroke", "#900")
+                        .attr("stroke-width", 0.8)
+                        .append("title")
+                        .text(`Gust: ${location.gustDirection} @ ${location.gustSpeed} km/h`);
+                    
+                    // Label for major cities
+                    if (["Sydney", "Melbourne", "Brisbane", "Perth", "Adelaide", 
+                         "Hobart", "Darwin", "Canberra"].includes(location.location)) {
+                        g.append("text")
+                            .attr("class", "location-label")
+                            .attr("x", x + 8)
+                            .attr("y", y)
+                            .text(location.location);
+                    }
+                });
+                
+                // Add legends (optimized to only create once)
+                if (!g.select(".wind-speed-legend").node()) {
+                    addLegends();
+                }
+            }
+            
+            // Add legends (called once)
+            function addLegends() {
+                // Wind speed legend
+                const windSpeedLegend = g.append("g")
+                    .attr("class", "wind-speed-legend")
+                    .attr("transform", `translate(${width - 180}, ${height - 180})`);
+                
+                const legendScale = d3.scaleLinear()
+                    .domain([0, 100])
+                    .range([0, 100]);
+                
+                 // Add axis with proper spacing
+                 windSpeedLegend.append("g")
+                    .attr("transform", "translate(20, 0)")
+                    .call(d3.axisRight(legendScale)
+                        .ticks(5)
+                        .tickSize(5))
+                    .select(".domain")
+                    .remove();
+                
+                windSpeedLegend.append("text")
+                    .attr("x", 50)
+                    .attr("y", -20)
+                    .text("Wind Speed (km/h)")
+                    .style("fill", "#900");
+                
+                // Gradient
+                const defs = svg.append("defs");
+                defs.append("linearGradient")
+                    .attr("id", "wind-gradient")
+                    .attr("x1", "0%")
+                    .attr("y1", "0%")
+                    .attr("x2", "0%")
+                    .attr("y2", "100%")
+                    .selectAll("stop")
+                    .data([
+                        {offset: "0%", color: d3.interpolateReds(0)},
+                        {offset: "100%", color: d3.interpolateReds(1)}
+                    ])
+                    .enter().append("stop")
+                    .attr("offset", d => d.offset)
+                    .attr("stop-color", d => d.color);
+                
+                windSpeedLegend.append("rect")
+                    .attr("width", 20)
+                    .attr("height", 100)
+                    .style("fill", "url(#wind-gradient)");
+                
+                // State color legend
+                const stateLegend = g.append("g")
+                    .attr("class", "legend state-legend")
+                    .attr("transform", `translate(30, 30)`);
+                
+                stateLegend.append("text")
+                    .attr("x", 0)
+                    .attr("y", -10)
+                    .text("States/Territories");
+                
+                Object.entries(stateColors).forEach(([state, color], i) => {
+                    stateLegend.append("rect")
+                        .attr("x", 0)
+                        .attr("y", i * 20)
+                        .attr("width", 15)
+                        .attr("height", 15)
+                        .attr("fill", color);
+                    
+                    stateLegend.append("text")
+                        .attr("x", 20)
+                        .attr("y", i * 20 + 12)
+                        .text(state)
+                        .style("font-size", "10px");
+                });
+                
+                // Compass
+                const compass = g.append("g")
+                    .attr("class", "compass")
+                    .attr("transform", `translate(${width - 100}, 200)`);
+                
+                compass.append("circle")
+                    .attr("r", 30)
+                    .attr("fill", "#fff")
+                    .attr("stroke", "#000");
+                
+                ['N', 'E', 'S', 'W'].forEach((dir, i) => {
+                    const angle = i * 90;
+                    compass.append("text")
+                        .attr("x", 30 * Math.sin(angle * Math.PI / 180))
+                        .attr("y", -30 * Math.cos(angle * Math.PI / 180))
+                        .attr("text-anchor", "middle")
+                        .attr("dy", "0.35em")
+                        .text(dir);
+                });
+            }
+            
+        }).catch(function(error) {
+            console.error("Error loading data:", error);
+            d3.select("#loading").text("Error loading data. Please check console for details.");
+            d3.select("#date-display").text("Data load failed");
+        });
+    </script>
+</body>
+</html>
