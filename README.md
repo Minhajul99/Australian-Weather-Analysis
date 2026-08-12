@@ -3,6 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
 [![Jupyter](https://img.shields.io/badge/jupyter-notebook-orange.svg)](https://jupyter.org/)
 [![Notebooks](https://img.shields.io/badge/notebooks-Jupyter-orange.svg)](https://nbviewer.org/)
+[![D3.js](https://img.shields.io/badge/D3.js-Interactive-orange.svg)](https://d3js.org/)
 
 Project status: Draft — please update notebook filenames, data paths, and examples as needed.
 
@@ -24,24 +25,27 @@ Project status: Draft — please update notebook filenames, data paths, and exam
 
 ## Project description
 
-Australian Weather Analysis is a collection of reproducible Jupyter Notebooks and helper scripts for exploring, cleaning, visualising, and analysing meteorological observations across Australia. The project demonstrates common data-science workflows applied to station-based weather data (temperature, rainfall, humidity, wind) and derived variables, with an emphasis on:
+Australian Weather Analysis is a collection of reproducible Jupyter Notebooks, helper scripts, and interactive web visualizations for exploring, cleaning, visualising, and analysing meteorological observations across Australia. The project demonstrates common data-science workflows applied to station-based weather data (temperature, rainfall, humidity, wind) and derived variables, with an emphasis on:
 
 - Exploratory data analysis (summary statistics, seasonal patterns)
 - Time-series analysis and decomposition (trends, seasonality)
 - Spatial visualisation and mapping of station data
 - Feature engineering for downstream modelling or forecasting
 - Reproducible notebooks and execution workflows
+- Interactive visualizations built with D3.js (HTML/JavaScript) for browser-based exploration
 
 Typical use cases:
 - Investigating long-term climate trends and seasonal behaviour
 - Building forecasting baselines or benchmark models
 - Visualising spatial patterns of rainfall/temperature across states/regions
+- Sharing interactive charts and maps via exported HTML (D3.js)
 
 ## Repository layout
 
 - `notebooks/` — Jupyter notebooks with the analysis (move or rename existing notebooks here)
 - `data/` — (gitignored) small sample datasets or pointers; large raw data should be stored externally
 - `figures/` — generated plots exported by notebooks (optional)
+- `web/` — interactive HTML/JS visualizations (D3.js) or standalone HTML exports (optional)
 - `scripts/` — helper scripts for downloading or preprocessing data (optional)
 - `requirements.txt` — Python dependencies for running the notebooks
 - `README.md` — this file
@@ -55,8 +59,10 @@ These are example notebook names and purposes — update them to match your repo
 - `1_data_preprocessing.ipynb` — load raw data, clean, merge, and prepare tidy tables
 - `2_exploratory_analysis.ipynb` — summary statistics, distributions, seasonal plots, station-level summaries
 - `3_time_series_analysis.ipynb` — decomposition, smoothing, trend estimation, baseline forecasting
-- `4_spatial_visualization.ipynb` — maps, station plots, choropleths
+- `4_spatial_visualization.ipynb` — maps, station plots, choropleths (may export static figures and interactive HTML)
 - `5_modeling_example.ipynb` — simple regression or ML baseline (optional)
+
+If the project includes D3.js visualizations, they may be stored in `web/` or exported as self-contained HTML files in `figures/` so they can be opened in a browser.
 
 ## Getting started (local)
 
@@ -87,6 +93,17 @@ These are example notebook names and purposes — update them to match your repo
    # or
    jupyter notebook
    ```
+
+5. Viewing interactive D3 visualizations
+
+If the repository contains standalone HTML/JS files (D3 visualizations), open them in a browser. Some browsers block local file access for scripts — to view interactive pages reliably, serve the repository over a local HTTP server and open http://localhost:8000 in your browser:
+
+```bash
+python -m http.server 8000
+# then open http://localhost:8000/web/ or http://localhost:8000/figures/ in your browser
+```
+
+Alternatively, you can host the `web/` folder on GitHub Pages or another static hosting provider.
 
 Open the notebooks in the `notebooks/` folder and run cells in order. If a notebook expects data in `data/`, either place files there or modify the paths in the notebook.
 
@@ -133,7 +150,11 @@ Example: spatial map of station means
 
 Description: A map of station locations coloured by mean annual rainfall or temperature. Generated from `4_spatial_visualization.ipynb`.
 
-Notes: If you do not yet have these figures, add placeholder images to `figures/` with the exact filenames above, or update the image links to match your filenames.
+Example: interactive D3 visualization (open in browser)
+
+If available, HTML files for interactive D3 visualizations are stored in `web/` or `figures/` and can be viewed via a local server as described above.
+
+Notes: If you do not yet have these figures or HTML visualizations, add placeholder images or HTML files to `figures/` or `web/` with the filenames above, or update the links to match your filenames.
 
 ## Development & contribution
 
