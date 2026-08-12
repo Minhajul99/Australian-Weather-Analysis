@@ -1,79 +1,137 @@
 # Australian Weather Analysis
 
-This repository contains exploratory data analysis and visualizations of Australian weather data using Jupyter Notebooks. The notebooks walk through data cleaning, exploratory analysis, feature engineering, and visualization steps to help understand patterns in temperature, rainfall, and other meteorological variables across Australia.
+Project status: Draft — please update notebook filenames, data paths, and examples as needed.
 
-## Contents
+## Project description
 
-- Notebooks/ - Jupyter notebooks with the analysis and visualizations.
-- data/ - (optional) folder to store raw and processed datasets if included.
-- figures/ - (optional) generated plots and figures exported from the notebooks.
+Australian Weather Analysis is a collection of reproducible Jupyter Notebooks and helper scripts for exploring, cleaning, visualising, and analysing meteorological observations across Australia. The project demonstrates common data-science workflows applied to station-based weather data (temperature, rainfall, humidity, wind) and derived variables, with an emphasis on:
 
-## Notebooks
+- Exploratory data analysis (summary statistics, seasonal patterns)
+- Time-series analysis and decomposition (trends, seasonality)
+- Spatial visualisation and mapping of station data
+- Feature engineering for downstream modelling or forecasting
+- Reproducible notebooks and execution workflows
 
-Key notebooks typically included in this project:
+Typical use cases:
+- Investigating long-term climate trends and seasonal behaviour
+- Building forecasting baselines or benchmark models
+- Visualising spatial patterns of rainfall/temperature across states/regions
 
-- data_preprocessing.ipynb — load and clean source weather datasets, handle missing values, and prepare data for analysis.
-- exploratory_analysis.ipynb — summary statistics and visual exploration of temperature, rainfall, and seasonal patterns.
-- time_series_analysis.ipynb — basic time-series decomposition and trend analysis.
-- visualization.ipynb — reproducible plots and maps showing spatial and temporal patterns.
+## Repository layout
 
-(adjust names above to match the actual notebook filenames in the repo)
+- notebooks/ — Jupyter notebooks with the analysis (move or rename existing notebooks here)
+- data/ — (gitignored) small sample datasets or pointers; large raw data should be stored externally
+- figures/ — generated plots exported by notebooks (optional)
+- scripts/ — helper scripts for downloading or preprocessing data (optional)
+- requirements.txt — Python dependencies for running the notebooks
+- README.md — this file
 
-## Getting started
+(Adjust folder names above to match the actual repository structure.)
 
-1. Clone the repository:
+## Notebooks (examples)
+
+These are example notebook names and purposes — update them to match your repo:
+
+- 1_data_preprocessing.ipynb — load raw data, clean, merge, and prepare tidy tables
+- 2_exploratory_analysis.ipynb — summary statistics, distributions, seasonal plots, station-level summaries
+- 3_time_series_analysis.ipynb — decomposition, smoothing, trend estimation, baseline forecasting
+- 4_spatial_visualization.ipynb — maps, station plots, choropleths
+- 5_modeling_example.ipynb — simple regression or ML baseline (optional)
+
+## Getting started (local)
+
+1. Clone the repository
 
    git clone https://github.com/Minhajul99/Australian-Weather-Analysis.git
    cd Australian-Weather-Analysis
 
-2. Create a virtual environment and install dependencies. Example with pip:
+2. Create and activate a virtual environment (recommended)
 
    python3 -m venv venv
-   source venv/bin/activate   # on Windows use `venv\Scripts\activate`
+   source venv/bin/activate  # Windows: venv\Scripts\activate
+
+3. Install dependencies
+
    pip install -r requirements.txt
 
-If there is no `requirements.txt`, install commonly used packages:
-
-   pip install jupyterlab notebook pandas numpy matplotlib seaborn geopandas plotly
-
-3. Start Jupyter Lab or Notebook and open the notebooks:
+4. Launch Jupyter
 
    jupyter lab
 
-or
+   or
 
    jupyter notebook
 
-## Data
+Open the notebooks in the `notebooks/` folder and run cells in order. If a notebook expects data in `data/`, either place files there or modify the paths in the notebook.
 
-This project uses public Australian weather datasets. If you are using Bureau of Meteorology (BOM) data or another public source, place the raw CSV files in the `data/` directory and update the notebook paths accordingly.
+## Data sources
 
-Note: Do not commit large raw datasets to the repository. If data is large, store it externally and include download instructions or scripts.
+Recommended public data sources for Australian weather:
+- Bureau of Meteorology (BOM): http://www.bom.gov.au/climate/data/ — station observations, rainfall, temperature
+- Australian Government open data portals
+- ERA5 / reanalysis datasets (for gridded meteorological fields)
+
+Practical tips:
+- Store raw/large data externally or in a cloud bucket; include sample or trimmed CSVs in `data/` for demos.
+- Add a short script (scripts/download_data.py) to download and prepare canonical datasets; include checksums or versions.
+
+## Data handling & preprocessing
+
+The notebooks demonstrate:
+- Handling missing values (flagging, interpolation, or dropping)
+- Converting timestamps to timezone-aware datetime
+- Aggregating to daily/monthly timescales
+- Joining station metadata (lat/lon, elevation)
+- Saving processed datasets to `data/processed/` for reproducibility
 
 ## Reproducibility
 
-- If notebooks rely on specific package versions, consider adding an `environment.yml` (conda) or `requirements.txt` to capture dependencies.
-- Use `nbconvert` or `papermill` if you want to run notebooks programmatically.
+- Pin critical package versions in `requirements.txt`. For geospatial packages, consider adding a conda `environment.yml` for easier installs.
+- To execute notebooks programmatically and generate fresh outputs:
+  - Use nbconvert: `jupyter nbconvert --to notebook --execute <notebook.ipynb> --output executed.ipynb`
+  - Use papermill for parameterised runs.
 
-## Results
+## Examples & outputs
 
-The notebooks produce figures and summary tables that highlight seasonal patterns, trends, and location-specific behavior in Australian weather. Generated figures can be saved to `figures/` for inclusion in reports or presentations.
+Notebooks will generate:
+- Time-series plots (daily/monthly trends)
+- Seasonal decomposition plots
+- Spatial maps of station statistics
+- Summary tables (CSV or markdown)
 
-## Contributing
+Save figures to `figures/` to keep the repo clean and to reference them in reports.
 
-Contributions are welcome. To contribute:
+## Development & contribution
 
-1. Fork the repository.
-2. Create a branch for your change: `git checkout -b feature/my-feature`
-3. Make your changes and add tests or notebook updates.
-4. Open a pull request with a clear description of your changes.
+Contributions are welcome:
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Add notebooks/scripts/tests and update README
+4. Open a pull request describing the change
 
-## License
+Guidelines:
+- Keep large datasets out of Git; use scripts to fetch them
+- Keep notebooks readable: split long analyses, add descriptive text, and clear cell outputs when committing
+- If adding geospatial data, include reprojection steps and citations for shapefiles
 
-Specify a license for the project (e.g., MIT) by adding a LICENSE file. If you already have a license, update this section to reference it.
+## Tests & CI
 
-## Contact
+This repo does not include automated tests by default. Suggestions for future improvements:
+- Add unit tests for data-processing functions (pytest)
+- Add CI to run lightweight notebook checks or static analysis
+- Use nbstripout or GitHub Actions to prevent large outputs from being committed
+
+## Requirements
+
+See `requirements.txt` for the Python packages used to run the notebooks and helper scripts.
+
+## Acknowledgements & citations
+
+When using BOM or other data, cite the data provider and include a reference in the notebook (and this README) to the specific dataset used.
+
+## Contact / Maintainer
 
 Maintainer: Minhajul99
+GitHub: https://github.com/Minhajul99/Australian-Weather-Analysis
 
-If you have questions or suggestions, open an issue or submit a pull request.
+If you have questions, open an issue or submit a pull request.
