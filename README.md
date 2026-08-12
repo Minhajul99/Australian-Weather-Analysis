@@ -1,6 +1,26 @@
 # Australian Weather Analysis
 
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Jupyter](https://img.shields.io/badge/jupyter-notebook-orange.svg)](https://jupyter.org/)
+[![Notebooks](https://img.shields.io/badge/notebooks-Jupyter-orange.svg)](https://nbviewer.org/)
+
 Project status: Draft — please update notebook filenames, data paths, and examples as needed.
+
+## Table of contents
+
+- [Project description](#project-description)
+- [Repository layout](#repository-layout)
+- [Notebooks (examples)](#notebooks-examples)
+- [Getting started (local)](#getting-started-local)
+- [Data sources](#data-sources)
+- [Data handling & preprocessing](#data-handling--preprocessing)
+- [Reproducibility](#reproducibility)
+- [Examples & outputs](#examples--outputs)
+- [Development & contribution](#development--contribution)
+- [Tests & CI](#tests--ci)
+- [Requirements](#requirements)
+- [Acknowledgements & citations](#acknowledgements--citations)
+- [Contact / Maintainer](#contact--maintainer)
 
 ## Project description
 
@@ -19,12 +39,12 @@ Typical use cases:
 
 ## Repository layout
 
-- notebooks/ — Jupyter notebooks with the analysis (move or rename existing notebooks here)
-- data/ — (gitignored) small sample datasets or pointers; large raw data should be stored externally
-- figures/ — generated plots exported by notebooks (optional)
-- scripts/ — helper scripts for downloading or preprocessing data (optional)
-- requirements.txt — Python dependencies for running the notebooks
-- README.md — this file
+- `notebooks/` — Jupyter notebooks with the analysis (move or rename existing notebooks here)
+- `data/` — (gitignored) small sample datasets or pointers; large raw data should be stored externally
+- `figures/` — generated plots exported by notebooks (optional)
+- `scripts/` — helper scripts for downloading or preprocessing data (optional)
+- `requirements.txt` — Python dependencies for running the notebooks
+- `README.md` — this file
 
 (Adjust folder names above to match the actual repository structure.)
 
@@ -32,35 +52,41 @@ Typical use cases:
 
 These are example notebook names and purposes — update them to match your repo:
 
-- 1_data_preprocessing.ipynb — load raw data, clean, merge, and prepare tidy tables
-- 2_exploratory_analysis.ipynb — summary statistics, distributions, seasonal plots, station-level summaries
-- 3_time_series_analysis.ipynb — decomposition, smoothing, trend estimation, baseline forecasting
-- 4_spatial_visualization.ipynb — maps, station plots, choropleths
-- 5_modeling_example.ipynb — simple regression or ML baseline (optional)
+- `1_data_preprocessing.ipynb` — load raw data, clean, merge, and prepare tidy tables
+- `2_exploratory_analysis.ipynb` — summary statistics, distributions, seasonal plots, station-level summaries
+- `3_time_series_analysis.ipynb` — decomposition, smoothing, trend estimation, baseline forecasting
+- `4_spatial_visualization.ipynb` — maps, station plots, choropleths
+- `5_modeling_example.ipynb` — simple regression or ML baseline (optional)
 
 ## Getting started (local)
 
 1. Clone the repository
 
+   ```bash
    git clone https://github.com/Minhajul99/Australian-Weather-Analysis.git
    cd Australian-Weather-Analysis
+   ```
 
 2. Create and activate a virtual environment (recommended)
 
+   ```bash
    python3 -m venv venv
    source venv/bin/activate  # Windows: venv\Scripts\activate
+   ```
 
 3. Install dependencies
 
+   ```bash
    pip install -r requirements.txt
+   ```
 
 4. Launch Jupyter
 
+   ```bash
    jupyter lab
-
-   or
-
+   # or
    jupyter notebook
+   ```
 
 Open the notebooks in the `notebooks/` folder and run cells in order. If a notebook expects data in `data/`, either place files there or modify the paths in the notebook.
 
@@ -73,7 +99,7 @@ Recommended public data sources for Australian weather:
 
 Practical tips:
 - Store raw/large data externally or in a cloud bucket; include sample or trimmed CSVs in `data/` for demos.
-- Add a short script (scripts/download_data.py) to download and prepare canonical datasets; include checksums or versions.
+- Add a short script (`scripts/download_data.py`) to download and prepare canonical datasets; include checksums or versions.
 
 ## Data handling & preprocessing
 
@@ -93,13 +119,21 @@ The notebooks demonstrate:
 
 ## Examples & outputs
 
-Notebooks will generate:
-- Time-series plots (daily/monthly trends)
-- Seasonal decomposition plots
-- Spatial maps of station statistics
-- Summary tables (CSV or markdown)
+Below are example output images and a short description. Add the generated figures to `figures/` with the filenames used below so they render in the README.
 
-Save figures to `figures/` to keep the repo clean and to reference them in reports.
+Example: time-series trend
+
+![Time series example](https://raw.githubusercontent.com/Minhajul99/Australian-Weather-Analysis/main/figures/time_series_example.png)
+
+Description: A plot showing daily temperature (or rainfall) with a rolling mean and seasonal bands. Generated from `2_exploratory_analysis.ipynb`.
+
+Example: spatial map of station means
+
+![Station map example](https://raw.githubusercontent.com/Minhajul99/Australian-Weather-Analysis/main/figures/station_map_example.png)
+
+Description: A map of station locations coloured by mean annual rainfall or temperature. Generated from `4_spatial_visualization.ipynb`.
+
+Notes: If you do not yet have these figures, add placeholder images to `figures/` with the exact filenames above, or update the image links to match your filenames.
 
 ## Development & contribution
 
